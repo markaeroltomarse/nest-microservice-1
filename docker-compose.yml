@@ -1,0 +1,71 @@
+version: '3'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    volumes:
+      - /var/lib/rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    env_file:
+      - .env
+    networks:
+      - nest-microservices-net
+
+  auth:
+    build:
+      context: ./
+      dockerfile: ./apps/auth/Dockerfile
+    ports:
+      - '4001:8080' # Map container port 8080 to host port 4001
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev auth
+    networks:
+      - nest-microservices-net
+
+  orders:
+    build:
+      context: ./
+      dockerfile: ./apps/orders/Dockerfile
+    ports:
+      - '4002:8080' # Map container port 8080 to host port 4002
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev orders
+    networks:
+      - nest-microservices-net
+
+  nest-microservices:
+    build:
+      context: ./
+      dockerfile: ./apps/nest-microservices/Dockerfile
+    ports:
+      - '4000:8080' # Map container port 8080 to host port 4000
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - orders
+      - auth
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev nest-microservices
+    networks:
+      - nest-microservices-net
+
+networks:
+  nest-microservices-net:
